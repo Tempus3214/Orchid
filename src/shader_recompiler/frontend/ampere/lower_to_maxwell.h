@@ -1504,6 +1504,11 @@ case 0x311: { // F2I.FTZ.U64.TRUNC, per nvdisasm: Maxwell's F2I gives 32 bits, s
         case 0x23c: { // HMMA.1688/.16816.F16: D(16x8) = A(16xK) * B(Kx8) + C, f16 fragments.
             const char* env_mode = std::getenv("EDEN_NX2_TENSOR");
             const std::string_view mode = env_mode ? env_mode : "";
+            // EDEN_NX2_TENSOR=off rejects the program instead of emulating its matrix multiplies.
+            // The software expansion of a DLSS network is too slow (or never finishes compiling)
+            // on GPUs without cooperative matrix support; rejected tensor dispatches take
+            // KeplerCompute's plain upscale of the pass's input instead.
+            if (mode == "off") return fail(index, "native matrix multiply disabled (EDEN_NX2_TENSOR=off)");
             const u32 a = insn.Bits(24, 8), b = insn.Bits(32, 8), c = insn.Bits(64, 8);
             if ((insn.words[1] & ~0xffU) || (insn.words[2] & ~0x8ffU) > 0x800 || dest + 2 > 246 ||
                 a + 4 > 246 || b + 2 > 246 || (c != 255 && c + 2 > 246))
